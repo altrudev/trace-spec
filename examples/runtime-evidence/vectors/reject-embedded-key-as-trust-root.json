@@ -4,9 +4,6 @@
     "model_claim": "model claim: self-reported",
     "signer_trust": "untrusted"
   },
-  "context": {
-    "trusted_root_keys": []
-  },
   "record": {
     "eat_profile": "tag:agentrust-io.com,2026:trace-v0.3",
     "iat": 1753056000,
@@ -50,5 +47,8 @@
       }
     },
     "signature": "uBUT0tPs1kbBzGAv8CKDZ5aNJ_saBmtBGTTcQFIeH7WGxHldc_x4xdh7YBUf847Cua4y9GC7lmWTCsKrx1eaAA"
+  },
+  "context": {
+    "trusted_root_keys": []
   }
 }
