@@ -105,6 +105,53 @@ def _nonempty_string(value: Any, field: str) -> str:
     return value
 
 
+def _bind_successor_observation(
+    after: dict[str, Any], expected_successor_digest: str
+) -> dict[str, Any]:
+    """Bind the exact successor envelope using the bridge identity relation.
+
+    The digest covers observation content, observer identity, and observation time.
+    This establishes integrity only. Trust, freshness, independence, and predicate
+    sufficiency are deliberately evaluated separately.
+    """
+    if not isinstance(after, dict):
+        raise AuthorizationMismatch("transcript.after must be a successor observation object")
+    required = {"observation", "observer", "observed_at"}
+    missing = required - set(after)
+    unknown = set(after) - required
+    if missing:
+        raise AuthorizationMismatch(
+            f"transcript.after is missing successor fields: {sorted(missing)}"
+        )
+    if unknown:
+        raise AuthorizationMismatch(
+            f"transcript.after contains unknown successor fields: {sorted(unknown)}"
+        )
+    if not isinstance(after["observation"], dict):
+        raise AuthorizationMismatch("transcript.after.observation must be an object")
+    _nonempty_string(after["observer"], "transcript.after.observer")
+    observed_at = after["observed_at"]
+    if (
+        not isinstance(observed_at, int)
+        or isinstance(observed_at, bool)
+        or observed_at < 0
+    ):
+        raise IntentBridgeError(
+            "transcript.after.observed_at must be a non-negative integer Unix timestamp"
+        )
+    expected = _digest(expected_successor_digest, "expected_successor_digest")
+    try:
+        actual = digest_jcs(after)
+    except IntentBridgeError:
+        raise AuthorizationMismatch(
+            "transcript.after has no RFC 8785 canonical form"
+        ) from None
+    if not compare_digest(expected, actual):
+        raise AuthorizationMismatch(
+            "transcript.after does not match the expected successor digest"
+        )
+    return after
+
 
 def _decision(value: Any) -> str:
     """Return a valid authorization decision or refuse a malformed value."""
