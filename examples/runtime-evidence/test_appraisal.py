@@ -93,3 +93,22 @@ def test_regeneration_matches_committed_vectors(tmp_path: Path) -> None:
     assert {path.name for path in generated} == {path.name for path in VECTORS}
     for path in generated:
         assert path.read_bytes() == (VECTOR_DIR / path.name).read_bytes(), path.name
+
+
+def _jwk_identity(jwk: dict) -> tuple[object, object, object]:
+    return (jwk.get("kty"), jwk.get("crv"), jwk.get("x"))
+
+
+def test_embedded_key_is_not_external_verifier_context() -> None:
+    vector = json.loads(
+        (VECTOR_DIR / "reject-embedded-key-as-trust-root.json").read_text(encoding="utf-8")
+    )
+    record = vector["record"]
+    rules.check_envelope(record)
+    assert rules.appraise(record) == "platform-attested"
+    external_keys = vector["context"]["trusted_root_keys"]
+    assert external_keys == []
+    embedded = _jwk_identity(record["cnf"]["jwk"])
+    configured = {_jwk_identity(jwk) for jwk in external_keys}
+    assert embedded not in configured
+    assert vector["expected"]["signer_trust"] == "untrusted"
