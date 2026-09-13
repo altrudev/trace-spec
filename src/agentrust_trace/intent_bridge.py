@@ -11,7 +11,12 @@ from typing import Any
 import rfc8785
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from agentrust_trace.sign import _b64url_decode, _canonical_bytes, _pubkey_from_jwk
+from agentrust_trace.sign import (
+    JCS_SAFE_INTEGER,
+    _b64url_decode,
+    _canonical_bytes,
+    _pubkey_from_jwk,
+)
 
 BRIDGE_PROFILE = "tag:agentrust-io.com,2026:pic-trace-bridge-v1"
 PIC_PROFILE = "PIC-CJSON/1.0"
@@ -135,9 +140,11 @@ def _bind_successor_observation(
         not isinstance(observed_at, int)
         or isinstance(observed_at, bool)
         or observed_at < 0
+        or observed_at > JCS_SAFE_INTEGER
     ):
         raise IntentBridgeError(
-            "transcript.after.observed_at must be a non-negative integer Unix timestamp"
+            "transcript.after.observed_at must be a non-negative integer within "
+            "the JCS safe-integer range"
         )
     expected = _digest(expected_successor_digest, "expected_successor_digest")
     try:
@@ -148,7 +155,7 @@ def _bind_successor_observation(
         ) from None
     if not compare_digest(expected, actual):
         raise AuthorizationMismatch(
-            "transcript.after does not match the expected successor digest"
+            "transcript.after does not match the expected digest binding"
         )
     return after
 
