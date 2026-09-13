@@ -38,6 +38,57 @@ required, and `before.tool_call` must equal the executed call. This binds the
 authorization to the call and its execution evidence without claiming that
 TRACE proves the real-world outcome of the call.
 
+### Successor-observation binding
+
+A profile that elects to make a successor-state claim uses a successor envelope with
+exactly three fields:
+
+~~~json
+{
+  "observation": {"application": "defined"},
+  "observer": "observer-identity",
+  "observed_at": 1750000000
+}
+~~~
+
+The bridge identity relation is the SHA-256 digest of the RFC 8785 canonical bytes of
+that complete envelope. The binding therefore covers the observation content, observer
+identity, and observation timestamp together. Relabelling a genuine observation to a
+different observer, retiming it, or altering its content changes the binding.
+
+A matching binding establishes **integrity**, not **sufficiency**. It does not by itself
+establish that the requested transition occurred. A verifier evaluating a successor
+claim separately applies its configured trust, freshness, and observation-source
+policy and then an application- or profile-defined transition predicate.
+
+The successor-evaluation surface has three evidence outcomes:
+
+- `established`: trusted, bound successor evidence satisfies the transition predicate;
+- `contradicted`: trusted, bound successor evidence contradicts the transition predicate;
+- `not-established`: the available evidence is absent or insufficient to justify
+  either conclusion.
+
+Malformed successor artifacts and binding failures are refusals, not a fourth evidence
+outcome. An absent `after` is `not-established`, not a refusal: the bridge cannot
+distinguish a profile that elected a successor claim from one that did not merely from
+absence, and absence MUST NOT become a positive conclusion.
+
+Observation independence is policy, not a universal rule. Where verifier policy
+requires an observer independent of the executing principal, executor-supplied
+successor evidence alone is insufficient and yields `not-established`. Where the
+applicable policy permits deterministic local evidence, the same-principal observation
+is not rejected merely because observer and executor are equal.
+
+A successful successor binding permits the verifier to conclude only that it is
+evaluating the exact bound observation envelope and, after policy evaluation, that the
+envelope's source/freshness/trust properties are acceptable. A transition-level
+positive conclusion additionally requires the defined predicate over the relevant
+predecessor, action/execution, and successor evidence. A bound `after` object alone
+does not prove a real-world outcome.
+
+The surface-local three-state result is an instance of the evidence discipline tracked
+in #279; it does not introduce a repository-wide status enum.
+
 The reference implementation is `agentrust_trace.intent_bridge`; the versioned
 schema is `schema/pic-trace-bridge-v1.json`.
 
