@@ -357,6 +357,18 @@ def build_corpus() -> list[tuple[str, str, str | None, dict]]:
         )
     )
 
+    # The record's embedded cnf.jwk verifies its signature but cannot establish
+    # relying-party trust in that signer. External trust context is intentionally empty.
+    external_trust = copy.deepcopy(accept)
+    vectors.append(
+        (
+            "reject-embedded-key-as-trust-root",
+            "platform-attested",
+            "model claim: self-reported",
+            external_trust,
+        )
+    )
+
     # Forged: one byte flipped inside the region the attestation key signs.
     forged_quote = bytearray(quote_a)
     forged_quote[48 + 136] ^= 0xFF
@@ -464,15 +476,15 @@ def main() -> int:
             # without re-deriving it. `record` stays a clean TRACE record, because a
             # vector carrying an extra top-level member would fail the very schema the
             # corpus exists to exercise.
+            wrapper = {
+                "expected": {"grade": expected, "model_claim": expected_claim},
+                "record": record,
+            }
+            if name == "reject-embedded-key-as-trust-root":
+                wrapper["expected"]["signer_trust"] = "untrusted"
+                wrapper["context"] = {"trusted_root_keys": []}
             (out / f"{name}.json").write_text(
-                json.dumps(
-                    {
-                        "expected": {"grade": expected, "model_claim": expected_claim},
-                        "record": record,
-                    },
-                    indent=2,
-                )
-                + "\n",
+                json.dumps(wrapper, indent=2) + "\n",
                 encoding="utf-8",
             )
 
