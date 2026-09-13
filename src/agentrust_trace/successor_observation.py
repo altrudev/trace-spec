@@ -9,10 +9,13 @@ from __future__ import annotations
 
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
-from hmac import compare_digest
 from typing import Any, Literal
 
-from agentrust_trace.intent_bridge import IntentBridgeError, digest_jcs
+from agentrust_trace.intent_bridge import (
+    AuthorizationMismatch,
+    IntentBridgeError,
+    _bind_successor_observation,
+)
 from agentrust_trace.sign import JCS_SAFE_INTEGER
 
 SuccessorStatus = Literal["established", "contradicted", "not-established"]
@@ -96,50 +99,15 @@ def evaluate_successor_observation(
 
     if after is None:
         return _not_established("successor observation is absent")
-    if not isinstance(after, dict):
-        raise SuccessorObservationError("successor observation envelope must be an object")
-
-    required = {"observation", "observer", "observed_at"}
-    missing = required - set(after)
-    unknown = set(after) - required
-    if missing:
-        raise SuccessorObservationError(
-            f"successor observation is missing fields: {sorted(missing)}"
-        )
-    if unknown:
-        raise SuccessorObservationError(
-            f"successor observation contains unknown fields: {sorted(unknown)}"
-        )
-
-    observation = after["observation"]
-    if not isinstance(observation, dict):
-        raise SuccessorObservationError("successor observation must be an object")
-
-    observer = after["observer"]
-    if not isinstance(observer, str) or not observer:
-        raise SuccessorObservationError("successor observer must be a non-empty string")
-
-    observed_at = after["observed_at"]
-    if (
-        not isinstance(observed_at, int)
-        or isinstance(observed_at, bool)
-        or observed_at < 0
-        or observed_at > JCS_SAFE_INTEGER
-    ):
-        raise SuccessorObservationError(
-            "successor observed_at must be a non-negative integer within the JCS safe-integer range"
-        )
 
     try:
-        actual = digest_jcs(after)
-    except IntentBridgeError as exc:
-        raise SuccessorObservationError(
-            f"successor envelope has no RFC 8785 canonical form: {exc}"
-        ) from exc
-    if not compare_digest(expected, actual):
-        raise SuccessorObservationError(
-            "successor envelope does not match the expected digest binding"
-        )
+        bound = _bind_successor_observation(after, expected)
+    except (IntentBridgeError, AuthorizationMismatch) as exc:
+        raise SuccessorObservationError(str(exc)) from exc
+
+    observation = bound["observation"]
+    observer = bound["observer"]
+    observed_at = bound["observed_at"]
 
     if observer not in trusted_observers:
         return _not_established("successor observer is not trusted by verifier policy")
