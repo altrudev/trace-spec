@@ -71,7 +71,7 @@ The successor-evaluation surface has three evidence outcomes:
 Malformed successor artifacts and binding failures are refusals, not a fourth evidence
 outcome. An absent `after` is `not-established`, not a refusal: the bridge cannot
 distinguish a profile that elected a successor claim from one that did not merely from
-absence, and absence MUST NOT become a positive conclusion.
+absence, and absence must not become a positive conclusion.
 
 Observation independence is policy, not a universal rule. Where verifier policy
 requires an observer independent of the executing principal, executor-supplied
