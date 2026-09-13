@@ -1,8 +1,8 @@
-"""Experimental successor-observation evaluation for PIC/TRACE bridge review.
+"""Evaluate bound PIC/TRACE successor observations without conflating integrity and closure.
 
-This module is intentionally not wired into the v1 bridge schema. It isolates the
-semantics proposed in #338 so reviewers can falsify the conclusion rules before any
-wire-format decision is made.
+The bridge-local binding establishes the exact successor envelope. This module applies
+trust, freshness, independence policy, and an application-defined transition predicate
+to produce the surface-local three-state evidence result defined by #338.
 """
 
 from __future__ import annotations
