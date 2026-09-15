@@ -367,7 +367,7 @@ def verify_record_report(
 ) -> dict[str, Any]:
     """Verify *record* and return a bounded machine-readable verification statement.
 
-    This is a reporting wrapper around :func:\`verify_record\`. It does not weaken
+    This is a reporting wrapper around ``verify_record``. It does not weaken
     or replace any check performed there. The returned statement distinguishes
     checks that were performed from checks the caller deliberately omitted.
 
