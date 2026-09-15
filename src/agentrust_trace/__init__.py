@@ -33,6 +33,7 @@ from agentrust_trace.sign import (
     load_signing_key,
     sign_record,
     verify_record,
+    verify_record_report,
 )
 from agentrust_trace.validate import (
     iter_errors,
@@ -83,6 +84,7 @@ __all__ = [
     "load_signing_key",
     "sign_record",
     "verify_record",
+    "verify_record_report",
 ]
 
 # MCP Server Provenance Records (spec/server-provenance-v1.md) live in their own
