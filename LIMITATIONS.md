@@ -8,10 +8,10 @@ This document describes what TRACE does not do, and where layered defenses are n
 A TRACE claim at Level 0 (software-only signing) is signed by a key held in software. A privileged operator with root access can produce a valid-looking Level 0 record for a run that never happened, or that violated policy. Level 0 is suitable for development and audit-trail tooling only, not for third-party verification.
 
 **Replay of a valid past record**
-A TRACE claim proves a specific run happened; it does not prevent a verifier from being shown a valid record from an earlier run. Verifiers that rely on recency must bound `iat` in both directions (maximum age and allowed future clock skew), check `exp` when present, require nonce binding to a challenge, or anchor records to a public transparency log and check for freshness.
+A successfully verified TRACE record authenticates the signed assertions under the trust evidence and checks actually applied. At hardware-rooted levels, suitable attestation can provide evidence that a measured execution environment produced the record; at Level 0, a privileged operator can still fabricate a record for a run that never happened. In every case, verification does not prevent a relying party from being shown an older valid record. Verifiers that rely on recency must bound `iat` in both directions (maximum age and allowed future clock skew), check `exp` when present, require nonce binding to a challenge, or anchor records to a public transparency log and check for freshness.
 
-**Policy correctness**
-The `policy.bundle_hash` field attests that a specific policy was in force at runtime. It does not attest that the policy achieves the intended security outcome. Policy review is a separate control.
+**Policy identity is not policy correctness or universal proof of enforcement**
+The signed `policy.bundle_hash` binds the record to a specific policy digest. What can be concluded about evaluation or enforcement depends on `policy.enforcement_mode`, the trust level, and any independent runtime attestation/appraisal evidence. Even when enforcement is adequately evidenced, TRACE does not establish that the policy achieves the intended security outcome. Policy review is a separate control.
 
 **What happened inside the model**
 The call transcript records tool invocations, arguments, and responses that are observable at the gateway boundary. It does not record the model's internal chain-of-thought, intermediate reasoning, or context window contents. Reasoning that influences behavior without producing a tool call is not captured.
