@@ -252,7 +252,7 @@ A failed signature means either the record was tampered with after issuance, or 
 
 ## Summary
 
-You verified a TRACE Trust Record by checking its Ed25519 signature, validating its schema, and interpreting the appraisal status. Signature verification uses the embedded `cnf.jwk` by default; pass a trusted key to pin verification to a specific issuer. Schema validation with `validate_json()` or `iter_errors()` is a separate step that confirms the record structure is well-formed.
+You verified a TRACE Trust Record by checking its Ed25519 signature, validating its schema, and interpreting the appraisal status. Signature verification requires a caller-trusted key by default. The embedded `cnf.jwk` is checked for confirmation-key binding; trusting it as the verification key requires the explicit `allow_embedded_key=True` internal-consistency mode and does not establish issuer authenticity. Schema validation with `validate_json()` or `iter_errors()` is a separate step that confirms the record structure is well-formed.
 
 Related tutorials:
 

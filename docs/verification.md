@@ -13,7 +13,7 @@ unknown field, missing required claim, or invalid enum meaningful. The Python
 
 ### Step 1: Parse the envelope
 
-A TRACE Trust Record is a signed JSON object. The `signature` field contains a base64url-encoded Ed25519 (or ES256/ES384) signature over the canonical JSON of the record with only `signature` removed. The `cnf.jwk` public key remains in the signed pre-image, binding that key to the rest of the record.
+A TRACE Trust Record is cryptographically bound as defined by the applicable profile. The Python reference `verify_record()` implements the v0.2 embedded top-level Ed25519 binding: `signature` is base64url-encoded Ed25519 over the RFC 8785 canonical JSON of the record with only `signature` removed, and `cnf.jwk` remains in the signed pre-image. The TRACE specification also permits enveloping JWS/COSE profiles and broader algorithms at those envelope layers; those are not accepted by this `verify_record()` entry point unless a dedicated profile verifier implements them.
 
 ```python
 import json, base64

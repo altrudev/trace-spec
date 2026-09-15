@@ -604,6 +604,37 @@ def verify_record(
 
     from cryptography.exceptions import InvalidSignature as _InvalidSignature  # noqa: F401
 
+    # Verifier policy/configuration is part of the trust decision.
+    # Reject malformed values explicitly instead of letting Python coercion
+    # or TypeError decide verification semantics.
+    if max_age_seconds is not None:
+        if isinstance(max_age_seconds, bool) or not isinstance(max_age_seconds, int):
+            raise ValueError(
+                f"max_age_seconds must be an integer, got {type(max_age_seconds).__name__}"
+            )
+        if max_age_seconds < 0:
+            raise ValueError(
+                f"max_age_seconds must be non-negative, got {max_age_seconds}"
+            )
+
+    if isinstance(max_future_skew_seconds, bool) or not isinstance(
+        max_future_skew_seconds, int
+    ):
+        raise ValueError(
+            "max_future_skew_seconds must be an integer, got "
+            f"{type(max_future_skew_seconds).__name__}"
+        )
+    if max_future_skew_seconds < 0:
+        raise ValueError(
+            "max_future_skew_seconds must be non-negative, got "
+            f"{max_future_skew_seconds}"
+        )
+
+    if expected_nonce is not None and not isinstance(expected_nonce, str):
+        raise ValueError(
+            f"expected_nonce must be a string, got {type(expected_nonce).__name__}"
+        )
+
     # Profile first: refuse semantics this build does not implement before spending
     # any work on the record.
     if not isinstance(record, dict):
@@ -709,8 +740,6 @@ def verify_record(
         )
 
     # Freshness: bound the age of the record against its issued-at timestamp.
-    if max_future_skew_seconds < 0:
-        raise ValueError("max_future_skew_seconds must be non-negative")
     iat = record.get("iat")
     if not isinstance(iat, int) or isinstance(iat, bool):
         raise ValueError("record has no valid integer 'iat' for freshness check")
