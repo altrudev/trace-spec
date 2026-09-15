@@ -11,6 +11,14 @@ Format: [Semantic Versioning](https://semver.org/). Spec versions follow `MAJOR.
 
 ## [Unreleased]
 
+### Added
+
+- **Bounded machine-readable verification statements.** `verify_record_report()` runs the existing fail-closed `verify_record()` path and, only on success, returns a structured statement naming the exact verifier version, RFC 8785 canonical record SHA-256, trusted-key RFC 7638 thumbprint, performed versus skipped checks, revocation status, nonce status, and explicit trust/non-claim boundaries. The existing `verify_record()` API and return contract remain unchanged.
+
+### Changed
+
+- **Verification wording now distinguishes signed assertions from independently established facts.** In particular, a bound `policy.bundle_hash` authenticates the record's claim about policy identity; whether that policy was actually evaluated/enforced depends on `policy.enforcement_mode`, runtime trust level, and any separate attestation/appraisal evidence.
+
 ### Fixed
 
 - **The exported `SCHEMA` was the live object the validator reads.** `_schema()` is `lru_cache`d and `_validator()` is built over whatever it returns, so the name exposed "for downstream tooling that needs the raw dict" and the validator's schema were one object: lowering `SCHEMA["properties"]["iat"]["minimum"]` made a record dated 1970 valid to `validate_json()`, to `iter_errors()`, and to the structural gate inside `sign.verify_record()`, for every later call in the process. Nothing about the call site looks wrong, since adapting the raw dict is the use the comment invites. It is a deep copy now; a shallow one would leave the nested `properties` dicts shared and the same edit would still land.
