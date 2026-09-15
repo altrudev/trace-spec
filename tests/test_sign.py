@@ -803,7 +803,7 @@ def test_verify_record_report_distinguishes_checked_and_skipped_controls():
     assert report["trusted_key"]["jwk_thumbprint"] == jwk_thumbprint(key_to_jwk(key))
     assert report["checks"]["signature"]["status"] == "VERIFIED"
     assert report["checks"]["schema"]["status"] == "VERIFIED"
-    assert report["checks"]["freshness"]["status"] == "VERIFIED"
+    assert report["checks"]["freshness"]["status"] == "CHECKED"
     assert report["checks"]["nonce"]["status"] == "NOT_REQUESTED"
     assert report["checks"]["revocation"]["status"] == "NOT_CHECKED"
     assert report["scope"]["revocation"].startswith("NOT_CHECKED")
@@ -821,7 +821,7 @@ def test_verify_record_report_marks_revocation_when_checked():
         revocation=set(),
     )
 
-    assert report["checks"]["revocation"]["status"] == "VERIFIED"
+    assert report["checks"]["revocation"]["status"] == "CHECKED_NOT_REVOKED"
     assert report["scope"]["revocation"] == "CURRENT_STATUS_CHECKED"
 
 
@@ -837,7 +837,7 @@ def test_verify_record_report_marks_nonce_when_requested():
         expected_nonce="challenge-123",
     )
 
-    assert report["checks"]["nonce"]["status"] == "VERIFIED"
+    assert report["checks"]["nonce"]["status"] == "CHECKED_MATCHED"
 
 
 def test_verify_record_report_embedded_key_is_not_authenticity():
