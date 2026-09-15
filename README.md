@@ -76,6 +76,25 @@ signed = sign_record(record, key)
 ```
 See the [Quickstart guide](https://trace.agentrust-io.com/docs/quickstart/) for key persistence, validation, and anchoring the record to a transparency log.
 
+For relying-party verification that must retain exactly what was checked, use the bounded report API:
+
+```python
+from agentrust_trace import verify_record_report
+
+result = verify_record_report(
+    signed_record,
+    trusted_jwk,
+    revocation=current_revocation_store,
+)
+
+print(result["record"]["canonical_sha256"])
+print(result["trusted_key"]["jwk_thumbprint"])
+print(result["checks"]["revocation"]["status"])
+```
+
+`verify_record_report()` only returns a success statement after the existing fail-closed `verify_record()` path succeeds. It distinguishes checks that ran from optional checks that were not requested and states the resulting trust boundaries explicitly.
+
+
 ## Resources
 
 | | |
