@@ -799,6 +799,7 @@ def test_verify_record_report_distinguishes_checked_and_skipped_controls():
 
     assert report["status"] == "VERIFIED"
     assert report["verification_statement"] == "trace-verification-result-v1"
+    assert isinstance(report["verified_at_unix"], int)
     assert report["trusted_key"]["source"] == "caller-supplied-jwk"
     assert report["trusted_key"]["jwk_thumbprint"] == jwk_thumbprint(key_to_jwk(key))
     assert report["checks"]["signature"]["status"] == "VERIFIED"
@@ -822,7 +823,10 @@ def test_verify_record_report_marks_revocation_when_checked():
     )
 
     assert report["checks"]["revocation"]["status"] == "CHECKED_NOT_REVOKED"
-    assert report["scope"]["revocation"] == "CURRENT_STATUS_CHECKED"
+    assert report["scope"]["revocation"].startswith(
+        "CURRENT_STATUS_CHECKED_AGAINST_CALLER_SOURCE"
+    )
+    assert report["checks"]["revocation"]["source"] == "caller-supplied"
 
 
 def test_verify_record_report_marks_nonce_when_requested():
