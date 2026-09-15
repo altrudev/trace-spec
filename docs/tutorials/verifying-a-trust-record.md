@@ -144,7 +144,8 @@ After verifying the signature and schema, read `appraisal.status`:
 status = record["appraisal"]["status"]
 
 if status == "affirming":
-    # All evidence passed appraisal. Safe to act on the session output.
+    # The appraisal checks represented by this record passed.
+    # Whether to act is a separate relying-party policy decision.
     pass
 elif status == "warning":
     # Evidence passed with conditions. Review before acting.
@@ -190,7 +191,7 @@ print(f"platform: {runtime['platform']}")
 print(f"measurement: {runtime['measurement']}")
 ```
 
-For hardware-attested records, `runtime.measurement` is a real digest from the TEE. To confirm the key was generated inside the attested enclave, compare `runtime.measurement` against the published Reference Integrity Manifest at `runtime.rim_uri`. See [Hardware attestation platforms](hardware-attestation-platforms.md) for per-platform details.
+For a record that *claims* a hardware-attested platform, `runtime.measurement` carries the measurement asserted by the record. Do not treat the platform string or measurement field alone as proof that a TEE produced it. Establish that through the applicable attestation/appraisal verification path, then compare the verified measurement against the published Reference Integrity Manifest at `runtime.rim_uri`. See [Hardware attestation platforms](hardware-attestation-platforms.md) for per-platform details.
 
 ---
 
