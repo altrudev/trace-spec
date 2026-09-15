@@ -129,6 +129,39 @@ Both failure modes raise `ValueError`, including a store that cannot answer:
 
 The last row is the honest default. Omitting the store is a legitimate mode, since air-gapped audit of archived records has no other option, but the result means "this record was validly signed by this key", not "this key is still trusted".
 
+## Machine-readable verification statements
+
+`verify_record()` remains the minimal fail-closed verifier and returns `None` on success. Consumers that need to retain or transmit what was actually checked should use `verify_record_report()`:
+
+```python
+from agentrust_trace import verify_record_report
+
+result = verify_record_report(
+    record,
+    trusted_jwk,
+    expected_nonce="challenge-123",
+    revocation=current_revocation_store,
+)
+
+print(result["record"]["canonical_sha256"])
+print(result["trusted_key"]["jwk_thumbprint"])
+print(result["checks"]["revocation"]["status"])
+```
+
+A successful statement reports the verifier package/version, a SHA-256 over the RFC 8785 canonical JSON of the complete signed record, the caller-trusted key thumbprint, each check that was run, and each optional check that was not requested.
+
+The record hash is deliberately named `canonical_sha256`: it identifies the canonical signed JSON object presented to the verifier. It is **not** a hash of the original file bytes, transport framing, HTTP body, or archive containing the record.
+
+The statement also carries explicit scope boundaries:
+
+- a caller-supplied trusted key supports issuer-key authentication; an embedded record key supports internal consistency only;
+- `revocation: NOT_CHECKED` means exactly that — offline signature validity is not current trust;
+- a verified signature authenticates the signed assertions but does not independently prove policy correctness, model reasoning, physical/business outcome, or claims outside the record;
+- `policy.bundle_hash` binds the policy identity asserted by the record. Whether policy evaluation or enforcement is evidenced depends on `policy.enforcement_mode`, runtime trust level, and separate attestation/appraisal evidence.
+
+The report is a statement about **this verifier run**, not a general trust score.
+
+
 What the store does not yet do is entry-ID-scoped revocation. It answers "is this key revoked", which is the §3.2.3 fallback, so a key revoked after a long run of legitimate records currently invalidates all of them rather than the ones logged after `last_valid_entry_id`. Carrying the entry ID through `verify_record()` is implementation work tracked in the issue that produced §3.2.3, and the schemas the bundle format needs are published at [`schema/trace-revocation.json`](https://github.com/agentrust-io/trace-spec/blob/main/schema/trace-revocation.json) and [`schema/trace-revocation-bundle.json`](https://github.com/agentrust-io/trace-spec/blob/main/schema/trace-revocation-bundle.json).
 
 ## Verifying hardware-rooted records
@@ -286,13 +319,13 @@ external outcome claim.
 |---|---|
 | Signature valid | The record was not tampered with after issuance |
 | `cnf.jwk` hardware-bound | The signing key was generated inside a measured TEE |
-| `policy.bundle_hash` | This exact Cedar policy was in force, not an approximate |
+| `policy.bundle_hash` | The signed record is bound to this exact policy digest; enforcement/evaluation requires the applicable mode and trust evidence |
 | `tool_transcript.hash` | The audit log is intact and matches the record |
 | SCITT receipt valid | The record is in an append-only log: cannot be quietly deleted |
 
 ## What verification does NOT prove
 
-Verification proves *what happened during the recorded session* under the stated policy, in the stated environment. It does not:
+Verification establishes the signed TRACE assertions and the checks the verifier actually performs. The strength of any statement about what happened during execution depends on the record's trust level, attestation/appraisal evidence, and verification policy. It does not:
 
 - Prove the signing key is still trusted; offline verification cannot prove non-revocation, so pass a `revocation` store
 - Prove the agent's internal reasoning was sound
