@@ -11,6 +11,8 @@ Format: [Semantic Versioning](https://semver.org/). Spec versions follow `MAJOR.
 
 ## [Unreleased]
 
+## [0.9.1]
+
 ### Added
 
 - **Bounded machine-readable verification statements.** `verify_record_report()` runs the existing fail-closed `verify_record()` path and, only on success, returns a structured statement naming the exact verifier version, RFC 8785 canonical record SHA-256, trusted-key RFC 7638 thumbprint, performed versus skipped checks, revocation status, nonce status, and explicit trust/non-claim boundaries. The existing `verify_record()` API and return contract remain unchanged.
