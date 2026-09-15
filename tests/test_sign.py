@@ -865,3 +865,23 @@ def test_verify_record_report_does_not_emit_success_on_verification_failure():
         match=r"cnf\.jwk.*trusted key",
     ):
         verify_record_report(record, key_to_jwk(other))
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"max_age_seconds": "3600"}, "max_age_seconds"),
+        ({"max_age_seconds": True}, "max_age_seconds"),
+        ({"max_age_seconds": -1}, "max_age_seconds"),
+        ({"max_future_skew_seconds": "300"}, "max_future_skew_seconds"),
+        ({"max_future_skew_seconds": True}, "max_future_skew_seconds"),
+        ({"max_future_skew_seconds": -1}, "max_future_skew_seconds"),
+        ({"expected_nonce": 123}, "expected_nonce"),
+    ],
+)
+def test_verify_record_rejects_malformed_verifier_policy_inputs(kwargs, match):
+    key = generate_key()
+    record = sign_record(_fresh_record(), key)
+
+    with pytest.raises(ValueError, match=match):
+        verify_record(record, key_to_jwk(key), **kwargs)
