@@ -83,6 +83,7 @@ CALLS: dict[str, Callable[[Any], Any]] = {
     "sign.load_key": sign.load_key,
     "sign.sign_record": lambda v: sign.sign_record(v, _KEY),
     "sign.verify_record": lambda v: sign.verify_record(v, _JWK),
+    "sign.verify_record_report": lambda v: sign.verify_record_report(v, _JWK),
     "validate.iter_errors": validate.iter_errors,
     "validate.validate_json": validate.validate_json,
 }
@@ -176,6 +177,7 @@ REACHES: dict[str, tuple[Any, str]] = {
     "sign.load_key": (None, "ValueError"),
     "sign.sign_record": (None, "ValueError"),
     "sign.verify_record": (None, "ValueError"),
+    "sign.verify_record_report": (None, "ValueError"),
     "validate.validate_json": (None, "ValidationError"),
 }
 
