@@ -354,6 +354,128 @@ def _b64url_decode(value: str, *, field: str) -> bytes:
         raise ValueError(f"{field} is not valid base64url: {exc}") from exc
 
 
+
+def verify_record_report(
+    record: dict[str, Any],
+    public_key_or_jwk: Any = None,
+    *,
+    allow_embedded_key: bool = False,
+    max_age_seconds: int | None = 86400,
+    max_future_skew_seconds: int = 300,
+    expected_nonce: str | None = None,
+    revocation: RevocationStore | None = None,
+) -> dict[str, Any]:
+    """Verify *record* and return a bounded machine-readable verification statement.
+
+    This is a reporting wrapper around :func:\`verify_record\`. It does not weaken
+    or replace any check performed there. The returned statement distinguishes
+    checks that were performed from checks the caller deliberately omitted.
+
+    Important trust boundary: a successful result describes this verifier run.
+    It does not establish policy correctness, model-behavior soundness, physical
+    outcome success, or current non-revocation when no revocation source was supplied.
+    """
+    from importlib import metadata as _metadata
+
+    # Run the authoritative verifier first. If any required check fails, this
+    # function raises exactly as verify_record does and produces no success report.
+    verify_record(
+        record,
+        public_key_or_jwk=public_key_or_jwk,
+        allow_embedded_key=allow_embedded_key,
+        max_age_seconds=max_age_seconds,
+        max_future_skew_seconds=max_future_skew_seconds,
+        expected_nonce=expected_nonce,
+        revocation=revocation,
+    )
+
+    if public_key_or_jwk is None:
+        # This path can only have succeeded when allow_embedded_key=True.
+        trusted_jwk = record["cnf"]["jwk"]
+        trust_anchor = "embedded-record-key"
+        authenticity_scope = (
+            "INTERNAL_CONSISTENCY_ONLY: the record was verified against the key "
+            "it carries; issuer authenticity was not independently established."
+        )
+    elif isinstance(public_key_or_jwk, dict):
+        trusted_jwk = public_key_or_jwk
+        trust_anchor = "caller-supplied-jwk"
+        authenticity_scope = (
+            "CALLER_PINNED_KEY: signature and confirmation-key binding were verified "
+            "against a caller-supplied trusted JWK."
+        )
+    else:
+        trusted_jwk = _jwk_from_public_key(public_key_or_jwk)
+        trust_anchor = "caller-supplied-public-key"
+        authenticity_scope = (
+            "CALLER_PINNED_KEY: signature and confirmation-key binding were verified "
+            "against a caller-supplied trusted public key."
+        )
+
+    signed_canonical = _canonical_bytes(record)
+    record_sha256 = hashlib.sha256(signed_canonical).hexdigest()
+    trusted_thumbprint = jwk_thumbprint(trusted_jwk)
+
+    try:
+        verifier_version = _metadata.version("agentrust-trace")
+    except _metadata.PackageNotFoundError:
+        verifier_version = "source-tree"
+
+    checks = {
+        "profile": {"status": "VERIFIED", "profile": TRACE_PROFILE_V0_2},
+        "schema": {"status": "VERIFIED"},
+        "signature": {"status": "VERIFIED", "algorithm": "Ed25519"},
+        "confirmation_key_binding": {"status": "VERIFIED"},
+        "freshness": {
+            "status": "VERIFIED",
+            "max_age_seconds": max_age_seconds,
+            "max_future_skew_seconds": max_future_skew_seconds,
+        },
+        "nonce": {
+            "status": "VERIFIED" if expected_nonce is not None else "NOT_REQUESTED"
+        },
+        "revocation": {
+            "status": "VERIFIED" if revocation is not None else "NOT_CHECKED"
+        },
+    }
+
+    return {
+        "verification_statement": "trace-verification-result-v1",
+        "status": "VERIFIED",
+        "profile": TRACE_PROFILE_V0_2,
+        "verifier": {
+            "package": "agentrust-trace",
+            "version": verifier_version,
+        },
+        "record": {
+            "canonical_sha256": record_sha256,
+            "hash_scope": (
+                "RFC8785 canonical JSON of the complete signed record as supplied "
+                "to verify_record_report; this is not a hash of original file bytes."
+            ),
+        },
+        "trusted_key": {
+            "source": trust_anchor,
+            "jwk_thumbprint": trusted_thumbprint,
+        },
+        "checks": checks,
+        "scope": {
+            "authenticity": authenticity_scope,
+            "revocation": (
+                "CURRENT_STATUS_CHECKED"
+                if revocation is not None
+                else "NOT_CHECKED: offline signature validity does not prove the "
+                "signing key remains currently trusted."
+            ),
+            "claims": (
+                "VERIFIER_RUN_ONLY: success means the checks listed above passed "
+                "for this record under the supplied parameters. It does not prove "
+                "policy correctness, model reasoning, physical/business outcome, "
+                "or claims outside the signed TRACE record."
+            ),
+        },
+    }
+
 def sign_record(record: dict[str, Any], key: Ed25519PrivateKey) -> dict[str, Any]:
     """Return a copy of *record* with ``cnf.jwk`` populated and a ``signature`` field added.
 
