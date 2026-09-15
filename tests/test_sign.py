@@ -860,5 +860,8 @@ def test_verify_record_report_does_not_emit_success_on_verification_failure():
     other = generate_key()
     record = sign_record(_fresh_record(), key)
 
-    with pytest.raises(InvalidSignature):
+    with pytest.raises(
+        ValueError,
+        match=r"cnf\.jwk.*trusted key",
+    ):
         verify_record_report(record, key_to_jwk(other))
