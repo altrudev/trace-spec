@@ -17,6 +17,7 @@ from agentrust_trace import (
     key_to_jwk,
     sign_record,
     verify_record,
+    verify_record_report,
 )
 from agentrust_trace.sign import _canonical_bytes
 
@@ -788,3 +789,72 @@ def test_the_guards_do_not_refuse_what_they_should_accept():
 
     jwk_thumbprint(key_to_jwk(key))
     verify_record(record, key_to_jwk(key))
+
+
+def test_verify_record_report_distinguishes_checked_and_skipped_controls():
+    key = generate_key()
+    record = sign_record(_fresh_record(), key)
+
+    report = verify_record_report(record, key_to_jwk(key))
+
+    assert report["status"] == "VERIFIED"
+    assert report["verification_statement"] == "trace-verification-result-v1"
+    assert report["trusted_key"]["source"] == "caller-supplied-jwk"
+    assert report["trusted_key"]["jwk_thumbprint"] == jwk_thumbprint(key_to_jwk(key))
+    assert report["checks"]["signature"]["status"] == "VERIFIED"
+    assert report["checks"]["schema"]["status"] == "VERIFIED"
+    assert report["checks"]["freshness"]["status"] == "VERIFIED"
+    assert report["checks"]["nonce"]["status"] == "NOT_REQUESTED"
+    assert report["checks"]["revocation"]["status"] == "NOT_CHECKED"
+    assert report["scope"]["revocation"].startswith("NOT_CHECKED")
+    assert len(report["record"]["canonical_sha256"]) == 64
+    assert "not a hash of original file bytes" in report["record"]["hash_scope"]
+
+
+def test_verify_record_report_marks_revocation_when_checked():
+    key = generate_key()
+    record = sign_record(_fresh_record(), key)
+
+    report = verify_record_report(
+        record,
+        key_to_jwk(key),
+        revocation=set(),
+    )
+
+    assert report["checks"]["revocation"]["status"] == "VERIFIED"
+    assert report["scope"]["revocation"] == "CURRENT_STATUS_CHECKED"
+
+
+def test_verify_record_report_marks_nonce_when_requested():
+    key = generate_key()
+    record = _fresh_record()
+    record["runtime"]["nonce"] = "challenge-123"
+    signed = sign_record(record, key)
+
+    report = verify_record_report(
+        signed,
+        key_to_jwk(key),
+        expected_nonce="challenge-123",
+    )
+
+    assert report["checks"]["nonce"]["status"] == "VERIFIED"
+
+
+def test_verify_record_report_embedded_key_is_not_authenticity():
+    key = generate_key()
+    record = sign_record(_fresh_record(), key)
+
+    with pytest.warns(UserWarning):
+        report = verify_record_report(record, allow_embedded_key=True)
+
+    assert report["trusted_key"]["source"] == "embedded-record-key"
+    assert report["scope"]["authenticity"].startswith("INTERNAL_CONSISTENCY_ONLY")
+
+
+def test_verify_record_report_does_not_emit_success_on_verification_failure():
+    key = generate_key()
+    other = generate_key()
+    record = sign_record(_fresh_record(), key)
+
+    with pytest.raises(InvalidSignature):
+        verify_record_report(record, key_to_jwk(other))
