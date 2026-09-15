@@ -427,15 +427,17 @@ def verify_record_report(
         "signature": {"status": "VERIFIED", "algorithm": "Ed25519"},
         "confirmation_key_binding": {"status": "VERIFIED"},
         "freshness": {
-            "status": "VERIFIED",
+            "status": "CHECKED",
+            "age_check": "CHECKED" if max_age_seconds is not None else "NOT_REQUESTED",
+            "future_skew_check": "CHECKED",
             "max_age_seconds": max_age_seconds,
             "max_future_skew_seconds": max_future_skew_seconds,
         },
         "nonce": {
-            "status": "VERIFIED" if expected_nonce is not None else "NOT_REQUESTED"
+            "status": "CHECKED_MATCHED" if expected_nonce is not None else "NOT_REQUESTED"
         },
         "revocation": {
-            "status": "VERIFIED" if revocation is not None else "NOT_CHECKED"
+            "status": "CHECKED_NOT_REVOKED" if revocation is not None else "NOT_CHECKED"
         },
     }
 
