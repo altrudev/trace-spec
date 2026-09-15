@@ -437,13 +437,17 @@ def verify_record_report(
             "status": "CHECKED_MATCHED" if expected_nonce is not None else "NOT_REQUESTED"
         },
         "revocation": {
-            "status": "CHECKED_NOT_REVOKED" if revocation is not None else "NOT_CHECKED"
+            "status": "CHECKED_NOT_REVOKED" if revocation is not None else "NOT_CHECKED",
+            "source": "caller-supplied" if revocation is not None else None,
         },
     }
+
+    import time as _time
 
     return {
         "verification_statement": "trace-verification-result-v1",
         "status": "VERIFIED",
+        "verified_at_unix": int(_time.time()),
         "profile": TRACE_PROFILE_V0_2,
         "verifier": {
             "package": "agentrust-trace",
@@ -464,7 +468,10 @@ def verify_record_report(
         "scope": {
             "authenticity": authenticity_scope,
             "revocation": (
-                "CURRENT_STATUS_CHECKED"
+                "CURRENT_STATUS_CHECKED_AGAINST_CALLER_SOURCE: the supplied revocation "
+                "source returned not-revoked for the trusted key identifiers. This "
+                "statement does not automatically bind a CRL/bundle version or source "
+                "artifact unless the caller retains that evidence separately."
                 if revocation is not None
                 else "NOT_CHECKED: offline signature validity does not prove the "
                 "signing key remains currently trusted."
