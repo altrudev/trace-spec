@@ -16,6 +16,7 @@ from agentrust_trace import (
     sign_record,
     validate_json,
     verify_record,
+    verify_record_report,
 )
 from jsonschema import ValidationError
 
@@ -54,7 +55,17 @@ def main() -> None:
     key = generate_key()
     signed = sign_record(record, key)
     validate_json(signed)
-    verify_record(signed, key_to_jwk(key))
+    trusted_jwk = key_to_jwk(key)
+    verify_record(signed, trusted_jwk)
+    report = verify_record_report(signed, trusted_jwk, revocation=set())
+    if report.get("status") != "VERIFIED":
+        raise SystemExit("packaged verify_record_report did not return VERIFIED")
+    if report.get("checks", {}).get("revocation", {}).get("status") != "CHECKED_NOT_REVOKED":
+        raise SystemExit("packaged verify_record_report did not preserve revocation status")
+    if not report.get("record", {}).get("canonical_sha256"):
+        raise SystemExit("packaged verify_record_report omitted canonical record hash")
+    if not report.get("trusted_key", {}).get("jwk_thumbprint"):
+        raise SystemExit("packaged verify_record_report omitted trusted-key thumbprint")
 
     malformed = {**signed, "unexpected_security_semantics": "trusted"}
     try:
